@@ -1,5 +1,6 @@
 const pages = [];
 const bodies = new Map();
+const SITE_VERSION = "3";
 
 const docEl = document.querySelector("#doc");
 const crumbEl = document.querySelector("#crumb");
@@ -34,7 +35,7 @@ let current = null;
 boot();
 
 async function boot() {
-  const catalog = await fetch("catalog.json").then((r) => r.json());
+  const catalog = await fetch(versioned("catalog.json"), { cache: "no-store" }).then((r) => r.json());
   pages.push(...catalog.pages);
   renderNav();
   await Promise.all(pages.map(loadBody));
@@ -66,9 +67,14 @@ function anchorFromHash() {
 }
 
 async function loadBody(page) {
-  const response = await fetch(page.file);
+  const response = await fetch(versioned(page.file), { cache: "no-store" });
   const text = await response.text();
   bodies.set(page.id, text);
+}
+
+function versioned(url) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${SITE_VERSION}`;
 }
 
 function renderNav() {
@@ -109,7 +115,7 @@ function show(id, options) {
   }
   if (page.sketch) {
     vizEl.hidden = false;
-    const nextSrc = page.sketch;
+    const nextSrc = versioned(page.sketch);
     if (frameEl.getAttribute("src") !== nextSrc) frameEl.src = nextSrc;
   } else {
     vizEl.hidden = true;

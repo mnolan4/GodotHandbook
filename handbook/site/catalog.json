@@ -24,6 +24,6 @@
     {"id": "viz-signals", "section": "Visualizations", "title": "Signal flow", "file": "../docs/07-visualizations/signal-flow.md", "sketch": "sketches/signals.html"},
     {"id": "viz-loop", "section": "Visualizations", "title": "Game loop", "file": "../docs/07-visualizations/game-loop.md", "sketch": "sketches/game-loop.html"},
     {"id": "viz-coyote", "section": "Visualizations", "title": "Coyote time", "file": "../docs/07-visualizations/coyote-time.md", "sketch": "sketches/coyote.html"},
-    {"id": "viz-layers", "section": "Visualizations", "title": "Collision layers", "file": "../docs/07-visualizations/collision-layers.md", "sketch": "sketches/layers.html?v=2"}
+    {"id": "viz-layers", "section": "Visualizations", "title": "Collision layers", "file": "../docs/07-visualizations/collision-layers.md", "sketch": "sketches/layers.html"}
   ]
 }
