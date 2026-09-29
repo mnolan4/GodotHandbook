@@ -1,0 +1,29 @@
+{
+  "pages": [
+    {"id": "index", "section": "Start", "title": "How to read this", "file": "../README.md"},
+    {"id": "start", "section": "Start", "title": "Start here", "file": "../docs/00-start-here.md"},
+    {"id": "installing", "section": "Setup", "title": "Installing", "file": "../docs/01-setup/installing.md"},
+    {"id": "editor", "section": "Setup", "title": "Editor and project", "file": "../docs/01-setup/editor-and-project.md"},
+    {"id": "first-scene", "section": "Setup", "title": "First scene", "file": "../docs/01-setup/first-scene.md"},
+    {"id": "gdscript", "section": "GDScript", "title": "Language reference", "file": "../docs/02-gdscript/reference.md"},
+    {"id": "lifecycle", "section": "GDScript", "title": "Nodes, signals, lifecycle", "file": "../docs/02-gdscript/nodes-signals-lifecycle.md", "sketch": "sketches/scene-tree.html"},
+    {"id": "patterns", "section": "GDScript", "title": "Patterns", "file": "../docs/02-gdscript/patterns.md", "sketch": "sketches/signals.html"},
+    {"id": "csharp", "section": "C#", "title": "From Unity", "file": "../docs/03-csharp/from-unity.md"},
+    {"id": "gdextension", "section": "GDExtension", "title": "C++ and GDScript", "file": "../docs/03-gdextension/cpp-and-gdscript.md"},
+    {"id": "platformer", "section": "Examples", "title": "Platformer", "file": "../docs/04-examples/platformer.md", "sketch": "sketches/coyote.html"},
+    {"id": "saves", "section": "Examples", "title": "Collectibles and saves", "file": "../docs/04-examples/collectibles-and-saves.md"},
+    {"id": "dialogue", "section": "Examples", "title": "Dialogue and turns", "file": "../docs/04-examples/dialogue-and-turns.md"},
+    {"id": "architecture", "section": "Engine", "title": "Scenes and architecture", "file": "../docs/05-engine/scenes-architecture.md"},
+    {"id": "physics", "section": "Engine", "title": "Input, physics, navigation", "file": "../docs/05-engine/input-physics-navigation.md", "sketch": "sketches/layers.html"},
+    {"id": "ui", "section": "Engine", "title": "UI, animation, audio", "file": "../docs/05-engine/ui-animation-audio.md"},
+    {"id": "export", "section": "Engine", "title": "Debug, performance, export", "file": "../docs/05-engine/debug-performance-export.md", "sketch": "sketches/game-loop.html"},
+    {"id": "semester", "section": "Labs", "title": "Semester project", "file": "../docs/06-labs/semester-project.md"},
+    {"id": "cheatsheet", "section": "Labs", "title": "Cheatsheet", "file": "../docs/cheatsheet.md"},
+    {"id": "glossary", "section": "Labs", "title": "Glossary", "file": "../docs/glossary.md"},
+    {"id": "viz-ready", "section": "Visualizations", "title": "Ready order", "file": "../docs/07-visualizations/ready-order.md", "sketch": "sketches/scene-tree.html"},
+    {"id": "viz-signals", "section": "Visualizations", "title": "Signal flow", "file": "../docs/07-visualizations/signal-flow.md", "sketch": "sketches/signals.html"},
+    {"id": "viz-loop", "section": "Visualizations", "title": "Game loop", "file": "../docs/07-visualizations/game-loop.md", "sketch": "sketches/game-loop.html"},
+    {"id": "viz-coyote", "section": "Visualizations", "title": "Coyote time", "file": "../docs/07-visualizations/coyote-time.md", "sketch": "sketches/coyote.html"},
+    {"id": "viz-layers", "section": "Visualizations", "title": "Collision layers", "file": "../docs/07-visualizations/collision-layers.md", "sketch": "sketches/layers.html?v=2"}
+  ]
+}

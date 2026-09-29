@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ready order</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; background: #14110e; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Children become ready before their parent. The pulse walks that order.
+const INK = [239, 230, 212];
+const COPPER = [212, 120, 74];
+const BLUE_GREEN = [72, 168, 154];
+const GOLD = [228, 177, 90];
+const DUST = [150, 136, 118];
+
+const tree = {
+  id: "main", label: "Main", kind: "Node2D",
+  note: "Parent _ready runs last, after every child has finished.",
+  children: [
+    {
+      id: "player", label: "Player", kind: "CharacterBody2D",
+      note: "Safe to cache $Sprite and $Shape here. They are already ready.",
+      children: [
+        { id: "sprite", label: "Sprite", kind: "Sprite2D", note: "Leaf. Its _ready runs before Player.", children: [] },
+        { id: "shape", label: "Shape", kind: "CollisionShape2D", note: "Leaf. Still before Player, after Sprite.", children: [] }
+      ]
+    },
+    {
+      id: "level", label: "Level", kind: "Node2D",
+      note: "Sibling of Player. It waits for Ground, not for Player.",
+      children: [
+        { id: "ground", label: "Ground", kind: "TileMapLayer", note: "Leaf under Level. Ready before Level.", children: [] }
+      ]
+    }
+  ]
+};
+
+let order = [];
+let nodes = [];
+let pulse = -1;
+let pulseT = 0;
+let playing = false;
+let hover = null;
+let selected = null;
+let plate;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+  textFont("IBM Plex Mono, ui-monospace, monospace");
+  rebuildPlate();
+  flatten(tree, null, 0);
+  layout();
+  order = postorder(tree);
+  selected = nodes.find((n) => n.id === "main");
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  rebuildPlate();
+  layout();
+}
+
+function rebuildPlate() {
+  plate = createGraphics(width, height);
+  plate.pixelDensity(1);
+  for (let y = 0; y < height; y++) {
+    const t = y / Math.max(height, 1);
+    const r = lerp(18, 42, t);
+    const g = lerp(14, 28, t);
+    const b = lerp(11, 20, t);
+    plate.stroke(r, g, b);
+    plate.line(0, y, width, y);
+  }
+  plate.stroke(212, 120, 74, 18);
+  for (let x = 28; x < width; x += 28) plate.line(x, 0, x, height);
+  for (let y = 28; y < height; y += 28) plate.line(0, y, width, y);
+  for (let i = 0; i < 1800; i++) {
+    plate.stroke(239, 230, 212, random(8, 28));
+    plate.point(random(width), random(height));
+  }
+}
+
+function flatten(node, parent, depth) {
+  node.parent = parent;
+  node.depth = depth;
+  node.children.forEach((child) => flatten(child, node, depth + 1));
+}
+
+function walk(node, visit) {
+  visit(node);
+  node.children.forEach((child) => walk(child, visit));
+}
+
+function postorder(node) {
+  const list = [];
+  node.children.forEach((child) => list.push(...postorder(child)));
+  list.push(node);
+  return list;
+}
+
+function layout() {
+  nodes = [];
+  const leaves = [];
+  (function count(node) {
+    if (!node.children.length) leaves.push(node);
+    node.children.forEach(count);
+  })(tree);
+  const top = 78;
+  const bottom = height - 118;
+  leaves.forEach((leaf, i) => {
+    leaf.x = lerp(90, width - 90, leaves.length === 1 ? 0.5 : i / (leaves.length - 1));
+    leaf.y = bottom - 36;
+  });
+  (function place(node) {
+    node.children.forEach(place);
+    if (node.children.length) {
+      node.x = node.children.reduce((s, c) => s + c.x, 0) / node.children.length;
+      const depth = node.depth;
+      node.y = top + depth * ((bottom - top) / 3);
+    }
+    nodes.push(node);
+  })(tree);
+}
+
+function draw() {
+  image(plate, 0, 0);
+  drawEdges(tree);
+  nodes.forEach(drawNode);
+  drawCaption();
+  if (playing) {
+    pulseT += deltaTime / 700;
+    if (pulseT >= 1) {
+      pulseT = 0;
+      pulse += 1;
+      if (pulse >= order.length) {
+        playing = false;
+        pulse = order.length - 1;
+      }
+    }
+  }
+}
+
+function drawEdges(node) {
+  node.children.forEach((child) => {
+    const lit = pulse >= 0 && order.indexOf(child) <= pulse && order.indexOf(node) <= pulse;
+    stroke(lit ? BLUE_GREEN[0] : COPPER[0], lit ? BLUE_GREEN[1] : COPPER[1], lit ? BLUE_GREEN[2] : COPPER[2], lit ? 180 : 70);
+    strokeWeight(lit ? 2.2 : 1.2);
+    noFill();
+    bezier(
+      node.x, node.y + 28,
+      node.x, (node.y + child.y) / 2,
+      child.x, (node.y + child.y) / 2,
+      child.x, child.y - 28
+    );
+    drawEdges(child);
+  });
+}
+
+function drawNode(node) {
+  const reached = pulse >= 0 && order.indexOf(node) <= pulse;
+  const active = playing && order[pulse] === node;
+  const hot = hover === node || selected === node;
+  const w = 132;
+  const h = 52;
+  noStroke();
+  fill(20, 16, 13, 210);
+  rect(node.x - w / 2, node.y - h / 2, w, h, 3);
+  stroke(active ? GOLD[0] : reached ? BLUE_GREEN[0] : hot ? INK[0] : COPPER[0], active ? GOLD[1] : reached ? BLUE_GREEN[1] : hot ? INK[1] : COPPER[1], active ? GOLD[2] : reached ? BLUE_GREEN[2] : hot ? INK[2] : COPPER[2], active ? 255 : 200);
+  strokeWeight(active ? 2 : 1);
+  noFill();
+  rect(node.x - w / 2, node.y - h / 2, w, h, 3);
+  noStroke();
+  fill(INK);
+  textAlign(CENTER, CENTER);
+  textSize(13);
+  text(node.label, node.x, node.y - 8);
+  fill(DUST);
+  textSize(10);
+  text(node.kind, node.x, node.y + 10);
+  if (reached) {
+    const n = order.indexOf(node) + 1;
+    fill(GOLD);
+    textSize(10);
+    textAlign(LEFT, CENTER);
+    text(nf(n, 2), node.x - w / 2 + 8, node.y - h / 2 + 12);
+  }
+}
+
+function drawCaption() {
+  const subject = hover || selected;
+  noStroke();
+  fill(20, 16, 13, 220);
+  rect(24, height - 78, width - 48, 58, 3);
+  stroke(COPPER[0], COPPER[1], COPPER[2], 160);
+  strokeWeight(1);
+  noFill();
+  rect(24, height - 78, width - 48, 58, 3);
+  noStroke();
+  fill(GOLD);
+  textAlign(LEFT, TOP);
+  textSize(11);
+  text(playing ? "READY  " + (order[pulse] ? order[pulse].label : "") : "CLICK A NODE  ·  SPACE REPLAYS _ready", 40, height - 66);
+  fill(INK);
+  textSize(13);
+  text(subject ? subject.note : "Children finish _ready before the parent that owns them.", 40, height - 46);
+}
+
+function mouseMoved() {
+  hover = hit(mouseX, mouseY);
+}
+
+function mousePressed() {
+  const node = hit(mouseX, mouseY);
+  if (node) {
+    selected = node;
+    return;
+  }
+  replay();
+}
+
+function keyPressed() {
+  if (key === " ") replay();
+}
+
+function replay() {
+  pulse = 0;
+  pulseT = 0;
+  playing = true;
+  selected = order[0];
+}
+
+function hit(x, y) {
+  return nodes.find((node) => Math.abs(x - node.x) < 66 && Math.abs(y - node.y) < 26) || null;
+}
+</script>
+</body>
+</html>

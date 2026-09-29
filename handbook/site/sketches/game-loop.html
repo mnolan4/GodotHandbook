@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game loop</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; background: #14110e; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Outer ring: rendered frames. Inner ring: fixed physics ticks.
+const INK = [239, 230, 212];
+const COPPER = [212, 120, 74];
+const BLUE_GREEN = [72, 168, 154];
+const GOLD = [228, 177, 90];
+const DUST = [150, 136, 118];
+
+let plate;
+let hitch = 0.25;
+let dragging = false;
+let clock = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+  textFont("IBM Plex Mono, ui-monospace, monospace");
+  rebuild();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  rebuild();
+}
+
+function rebuild() {
+  plate = createGraphics(width, height);
+  plate.pixelDensity(1);
+  for (let y = 0; y < height; y++) {
+    plate.stroke(lerp(14, 34, y / height), lerp(12, 22, y / height), lerp(10, 16, y / height));
+    plate.line(0, y, width, y);
+  }
+  plate.noFill();
+  plate.stroke(212, 120, 74, 16);
+  for (let r = 40; r < Math.max(width, height); r += 36) plate.circle(width * 0.42, height * 0.46, r * 2);
+  for (let i = 0; i < 900; i++) {
+    plate.stroke(239, 230, 212, random(5, 18));
+    plate.point(random(width), random(height));
+  }
+}
+
+function draw() {
+  image(plate, 0, 0);
+  const cx = width * 0.42;
+  const cy = height * 0.46;
+  const outer = Math.min(width, height) * 0.30;
+  const inner = outer * 0.62;
+  clock += deltaTime / 1000;
+
+  const frameLen = lerp(0.45, 2.4, hitch);
+  const framePhase = (clock % frameLen) / frameLen;
+  const physicsHz = 8;
+  const tickPhase = (clock * physicsHz) % 1;
+  const ticksInFrame = Math.max(1, Math.round(lerp(1, 4, hitch)));
+
+  noFill();
+  stroke(BLUE_GREEN[0], BLUE_GREEN[1], BLUE_GREEN[2], 50);
+  strokeWeight(18);
+  circle(cx, cy, outer * 2);
+  stroke(BLUE_GREEN[0], BLUE_GREEN[1], BLUE_GREEN[2], 220);
+  strokeWeight(18);
+  arc(cx, cy, outer * 2, outer * 2, -HALF_PI, -HALF_PI + framePhase * TWO_PI);
+
+  stroke(GOLD[0], GOLD[1], GOLD[2], 40);
+  strokeWeight(10);
+  circle(cx, cy, inner * 2);
+  for (let i = 0; i < physicsHz; i++) {
+    const a = -HALF_PI + (i / physicsHz) * TWO_PI;
+    const hot = i === Math.floor(clock * physicsHz) % physicsHz;
+    stroke(hot ? INK[0] : GOLD[0], hot ? INK[1] : GOLD[1], hot ? INK[2] : GOLD[2], hot ? 240 : 90);
+    strokeWeight(hot ? 3 : 1.2);
+    const r0 = inner - 16;
+    const r1 = inner + 16;
+    line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1);
+  }
+
+  noStroke();
+  fill(INK);
+  textAlign(CENTER, CENTER);
+  textSize(13);
+  text("FRAME", cx, cy - 16);
+  fill(GOLD);
+  textSize(12);
+  text(ticksInFrame + " physics tick" + (ticksInFrame === 1 ? "" : "s"), cx, cy + 6);
+  fill(DUST);
+  textSize(11);
+  text("inside this draw", cx, cy + 24);
+
+  const marker = -HALF_PI + tickPhase * TWO_PI;
+  fill(GOLD);
+  noStroke();
+  circle(cx + cos(marker) * inner, cy + sin(marker) * inner, 8);
+
+  drawSlider();
+  caption(ticksInFrame);
+}
+
+function sliderGeom() {
+  return { x: width * 0.72, y: height * 0.28, h: Math.min(220, height * 0.4) };
+}
+
+function drawSlider() {
+  const s = sliderGeom();
+  stroke(COPPER[0], COPPER[1], COPPER[2], 140);
+  strokeWeight(2);
+  line(s.x, s.y, s.x, s.y + s.h);
+  noStroke();
+  fill(DUST);
+  textAlign(CENTER, BOTTOM);
+  textSize(11);
+  text("HITCH", s.x, s.y - 12);
+  const y = s.y + hitch * s.h;
+  fill(GOLD);
+  circle(s.x, y, 16);
+  fill(INK);
+  textAlign(LEFT, CENTER);
+  textSize(12);
+  text(hitch < 0.33 ? "steady frames" : hitch < 0.66 ? "a dropped frame" : "a stall", s.x + 18, y);
+}
+
+function caption(ticks) {
+  noStroke();
+  fill(20, 16, 13, 220);
+  rect(24, height - 78, width - 48, 58, 3);
+  fill(GOLD);
+  textAlign(LEFT, TOP);
+  textSize(11);
+  text("DRAG THE HITCH MARK", 40, height - 66);
+  fill(INK);
+  textSize(13);
+  text("A slow frame still steps physics " + ticks + " time" + (ticks === 1 ? "" : "s") + ". move_and_slide already consumes that fixed step.", 40, height - 46);
+}
+
+function mousePressed() {
+  const s = sliderGeom();
+  if (Math.abs(mouseX - s.x) < 24 && mouseY > s.y - 10 && mouseY < s.y + s.h + 10) dragging = true;
+}
+
+function mouseDragged() {
+  if (!dragging) return;
+  const s = sliderGeom();
+  hitch = constrain((mouseY - s.y) / s.h, 0, 1);
+}
+
+function mouseReleased() { dragging = false; }
+</script>
+</body>
+</html>

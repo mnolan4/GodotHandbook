@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coyote time</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; background: #14110e; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// A jump can be late by a breath, or early by a breath. Both should count.
+const INK = [239, 230, 212];
+const COPPER = [212, 120, 74];
+const BLUE_GREEN = [72, 168, 154];
+const GOLD = [228, 177, 90];
+const DUST = [150, 136, 118];
+
+let plate;
+let x;
+let y;
+let vy;
+let onGround;
+let leftGroundAt;
+let coyote;
+let buffer;
+let jumped;
+let message;
+let t0;
+
+const COYOTE = 0.12;
+const BUFFER = 0.14;
+const GRAVITY = 1800;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+  textFont("IBM Plex Mono, ui-monospace, monospace");
+  rebuild();
+  resetRun();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  rebuild();
+}
+
+function rebuild() {
+  plate = createGraphics(width, height);
+  plate.pixelDensity(1);
+  for (let yLine = 0; yLine < height; yLine++) {
+    const t = yLine / Math.max(height, 1);
+    plate.stroke(lerp(22, 48, t * t), lerp(16, 30, t), lerp(12, 22, t));
+    plate.line(0, yLine, width, yLine);
+  }
+  for (let i = 0; i < 700; i++) {
+    plate.stroke(239, 230, 212, random(6, 16));
+    plate.point(random(width), random(height));
+  }
+}
+
+function groundY() { return height * 0.62; }
+function ledgeX() { return width * 0.46; }
+function farX() { return width * 0.58; }
+
+function resetRun() {
+  x = width * 0.18;
+  y = groundY();
+  vy = 0;
+  onGround = true;
+  leftGroundAt = null;
+  coyote = 0;
+  buffer = 0;
+  jumped = false;
+  message = "Press J or the gold mark to jump.";
+  t0 = millis();
+}
+
+function draw() {
+  const dt = Math.min(deltaTime / 1000, 0.033);
+  step(dt);
+  image(plate, 0, 0);
+  drawWorld();
+  drawRunner();
+  drawMeters();
+  caption();
+}
+
+function step(dt) {
+  if (y < height + 40) x += 240 * dt;
+  const overGround = x <= ledgeX() || x >= farX();
+  const landing = overGround && vy >= 0 && y >= groundY() && y <= groundY() + 28;
+  if (landing) {
+    y = groundY();
+    vy = 0;
+    onGround = true;
+    coyote = COYOTE;
+    if (jumped && x >= farX()) message = "Landed past the gap.";
+    if (jumped && x <= ledgeX()) message = "Short hop. Still on the first ledge.";
+    jumped = false;
+  } else if (x <= ledgeX() && y >= groundY() && vy >= 0) {
+    y = groundY();
+    vy = 0;
+    onGround = true;
+    coyote = COYOTE;
+  } else {
+    if (onGround) onGround = false;
+    if (!jumped) coyote = Math.max(0, coyote - dt);
+    if (jumped || coyote <= 0) {
+      vy += GRAVITY * dt;
+      y += vy * dt;
+      if (!jumped && y > groundY() + 8) message = "Coyote window closed. The run falls.";
+    } else {
+      y = groundY();
+      vy = 0;
+    }
+  }
+  if (buffer > 0) buffer = Math.max(0, buffer - dt);
+  if (!jumped && buffer > 0 && coyote > 0 && y <= groundY()) {
+    jumped = true;
+    vy = -620;
+    y = groundY() - 1;
+    buffer = 0;
+    coyote = 0;
+    message = "Jump accepted. The two windows overlapped.";
+  }
+}
+
+function onLedge(px) {
+  return px <= ledgeX();
+}
+
+function drawWorld() {
+  const gy = groundY();
+  noStroke();
+  fill(42, 32, 26);
+  rect(width * 0.08, gy, ledgeX() - width * 0.08, 18, 2);
+  rect(farX(), gy, width * 0.84 - farX(), 18, 2);
+  stroke(COPPER[0], COPPER[1], COPPER[2], 180);
+  strokeWeight(2);
+  line(ledgeX(), gy, ledgeX(), gy + 18);
+  noStroke();
+  fill(DUST);
+  textAlign(CENTER, TOP);
+  textSize(11);
+  text("GAP", (ledgeX() + farX()) / 2, gy + 28);
+}
+
+function drawRunner() {
+  const gy = groundY();
+  const bob = jumped ? 0 : Math.sin(millis() / 120) * 2;
+  noStroke();
+  fill(20, 16, 13, 80);
+  ellipse(x, gy + 16, 28, 8);
+  fill(INK);
+  rect(x - 7, y - 36 + bob, 14, 28, 2);
+  fill(GOLD);
+  circle(x + 4, y - 42 + bob, 10);
+  if (coyote > 0 && !onGround && !jumped) {
+    noFill();
+    stroke(BLUE_GREEN[0], BLUE_GREEN[1], BLUE_GREEN[2], 160 + 80 * Math.sin(millis() / 80));
+    strokeWeight(2);
+    arc(x, y - 18, 46, 46, PI, TWO_PI);
+  }
+}
+
+function drawMeters() {
+  const x0 = 40;
+  const y0 = 48;
+  meter(x0, y0, "COYOTE", coyote / COYOTE, BLUE_GREEN);
+  meter(x0, y0 + 28, "BUFFER", buffer / BUFFER, GOLD);
+  noStroke();
+  fill(jumpLabelColor());
+  textAlign(LEFT, CENTER);
+  textSize(16);
+  text("JUMP", width - 120, 58);
+  noFill();
+  stroke(GOLD[0], GOLD[1], GOLD[2], 200);
+  rect(width - 132, 40, 88, 36, 3);
+}
+
+function jumpLabelColor() { return color(GOLD[0], GOLD[1], GOLD[2]); }
+
+function meter(x, y, label, amount, col) {
+  noStroke();
+  fill(DUST);
+  textAlign(LEFT, CENTER);
+  textSize(11);
+  text(label, x, y);
+  noFill();
+  stroke(col[0], col[1], col[2], 80);
+  rect(x + 78, y - 6, 160, 12, 2);
+  noStroke();
+  fill(col[0], col[1], col[2], 220);
+  rect(x + 78, y - 6, 160 * constrain(amount, 0, 1), 12, 2);
+}
+
+function caption() {
+  noStroke();
+  fill(20, 16, 13, 220);
+  rect(24, height - 78, width - 48, 58, 3);
+  fill(GOLD);
+  textAlign(LEFT, TOP);
+  textSize(11);
+  text("J TO JUMP  ·  R TO RUN AGAIN", 40, height - 66);
+  fill(INK);
+  textSize(13);
+  text(message, 40, height - 46);
+}
+
+function tryJump() {
+  if (jumped) return;
+  buffer = BUFFER;
+  if (coyote <= 0) message = "Buffered, but the coyote window is shut.";
+  else message = "Jump pressed. Waiting for both windows to overlap.";
+}
+
+function mousePressed() {
+  if (mouseX > width - 132 && mouseX < width - 44 && mouseY > 40 && mouseY < 76) tryJump();
+}
+
+function keyPressed() {
+  if (key === "j" || key === "J") tryJump();
+  if (key === "r" || key === "R") resetRun();
+}
+</script>
+</body>
+</html>
