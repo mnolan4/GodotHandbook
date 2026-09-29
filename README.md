@@ -29,10 +29,6 @@ Choose the path that best matches your experience and immediate goal. The refere
 
 ## Site
 
-From this folder:
+Open the [Godot Studio Handbook website](https://mnolan4.github.io/GodotHandbook/). The search field indexes the full text of every chapter, including code examples. Interactive diagrams are grouped under **Visualizations** and also appear beside related chapters.
 
-```bash
-python3 -m http.server 8765
-```
-
-Open `http://localhost:8765/site/`. The search field indexes the full text of every chapter, including code examples. Interactive diagrams are grouped under **Visualizations** and also appear beside related chapters.
+The website is published automatically through GitHub Pages whenever changes are pushed to the `main` branch.
